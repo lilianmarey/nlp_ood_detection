@@ -1,7 +1,11 @@
 env_nlp
 
+<<<<<<< HEAD
+.DS_Store
+=======
 */checkpoint
 */data
+>>>>>>> 430813d838f72c44208fc1223c049ab838fa577b
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
