@@ -32,7 +32,7 @@ def labelize(line):
         return 'strongly-detached-hall'
     elif line['full-unsupport']==1:
         return 'fully_detached'
-    elif line['named-entities']==1 or line['omission']==1 or line['mt']!=line['ref']:
+    elif line['named-entities']==1 or line['omission']==1 or line['mt'].lower()!=line['ref'].lower():
         return 'incorrect'
     else : return 'correct'
 
