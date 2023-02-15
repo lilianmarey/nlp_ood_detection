@@ -1,4 +1,5 @@
 pot
 fairseq
-"git+https://github.com/Juvenal-Yescas/mediafire-dl"
+git+https://github.com/Juvenal-Yescas/mediafire-dl
 sentencepiece
+wget

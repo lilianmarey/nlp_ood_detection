@@ -4,7 +4,7 @@ papier_1/distrib.csv
 .DS_Store
 */checkpoint
 */data
-
+*.pkl
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -134,3 +134,4 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+ot_hallucination/corpus.gz

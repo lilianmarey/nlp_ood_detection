@@ -91,5 +91,5 @@ model_output = model.predict(pairs, batch_size=8, gpus=1)
 seg_scores, system_score = model_output.scores, model_output.system_score
 
 # %%
-len(model_output[1])
+model_output[0]
 # %%

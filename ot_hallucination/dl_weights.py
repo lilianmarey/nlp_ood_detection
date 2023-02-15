@@ -4,6 +4,7 @@ import tarfile
 import os
 import wget
 
+#might need to get new links @ https://github.com/deep-spin/hallucinations-in-nmt
 
 def main():
     print("Download script for OT for Hallucination detection")
@@ -23,7 +24,7 @@ def main():
     if not os.path.isdir("data/wmt18_de-en") or not os.listdir("data/wmt18_de-en"):
         print("Downloading data... (260+ Mo)")
         mediafire_dl.download(
-            "https://download847.mediafire.com/lvmwgo10anxg/jfl7y6yu7jqwwhv/wmt18_de-en.tar.xz",
+            "https://download847.mediafire.com/s2x7sxq3kgcg/jfl7y6yu7jqwwhv/wmt18_de-en.tar.xz",
             "wmt18_de-en.tar.xz",
             False,
         )
