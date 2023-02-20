@@ -1,7 +1,7 @@
 env_nlp
 papier_1/distrib.csv
 papier_1/distrib_.csv
-
+*.pt
 .DS_Store
 */checkpoint
 */data

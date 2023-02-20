@@ -12,7 +12,7 @@ def main():
         print("Downloading model... (800+ Mo)")
 
         mediafire_dl.download(
-            "https://download2356.mediafire.com/l7lm29hmfdmg/mp5oim9hqgcy8fb/checkpoint_best.tar.xz",
+            "https://download1499.mediafire.com/2uid5yg67t7g/mp5oim9hqgcy8fb/checkpoint_best.tar.xz",
             "checkpoint_best.tar.xz",
             quiet=False,
         )
