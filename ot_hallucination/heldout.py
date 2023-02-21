@@ -44,17 +44,10 @@ tgt_dict.add_from_file("data/wmt18_de-en/dict.en.txt")
 # %%
 for a in ds:
     print(a)
-# %%
 
-class fairseq_pre_dataset(torch.utils.data.Dataset):
-    def __init__(self):
-        super(self ).__init__()
-        with open('data/wmt18_de-en'):
-        data = 
 
 #%%
 
-model.task.load_dataset('valid')
 # %%
 data_bin = model.task.datasets['valid']
 # %%

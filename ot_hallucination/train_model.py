@@ -8,6 +8,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import torch
+from torch.utils.data import Dataset, DataLoader
+
 
 #%%
 tokenizer = Tokenizer()
@@ -20,7 +23,6 @@ model = fairseq.models.transformer.TransformerModel.from_pretrained('checkpoint'
 model.eval()
 # %%
 input = "Ohne Frühstück machten wir uns wieder auf den Weg."
-tokenized_input = tokenizer.encode(input)
 
 # %%
 def labelize(line):
@@ -38,11 +40,45 @@ def labelize(line):
 
 
 #%%
-df = pd.read_csv('data/annotated_corpus.csv', index_col=0)
-df['label'] = df.apply(labelize, axis=1)
+
 #%%
 df.groupby('label').count()
 # %%
+
+class Corpus(Dataset):
+ 
+  def __init__(self):
+    df = pd.read_csv('data/annotated_corpus.csv', index_col=0)
+    df['label'] = df.apply(labelize, axis=1)
+    x = df['src'].tolist()
+    y = df['label'].tolist()
+    self.x_train=x
+    self.y_train=y
+ 
+  def __len__(self):
+    return len(self.y_train)
+   
+  def __getitem__(self,idx):
+    return self.x_train[idx],self.y_train[idx]
+#%%
+
+dl = 
+#%%
+
+corp = Corpus()
+
+#%%
+dl= DataLoader(corp, batch_size=8)
+#%%
+for txts, labels in tqdm(dl):
+        
+        outputs = model.generate(model.encode(txts), beam=5)
+        attns = output[0]['attention'].mean(axis=1).numpy()
+
+
+#%%
+df = pd.read_csv('data/annotated_corpus.csv', index_col=0)
+df['label'] = df.apply(labelize, axis=1)
 #%%
 scores = {"oscillatory-hall":[],"strongly-detached-hall":[], "fully_detached":[], "correct":[],'incorrect':[]   }
 progress = tqdm(total=len(df))
@@ -55,19 +91,20 @@ for cat in scores.keys():
         score = np.sum(np.abs(attn - u))*.5
         scores[cat].append(score)
         progress.update()
-
-
-    
-
 # %%
 import pickle
 # %%
 with open("scores.pkl", 'wb') as f :
     pickle.dump(scores,f)
 # %%
+with open("scores.pkl", 'rb') as f :
+    scores=pickle.load(f)
+
+#%%
 hallucination = scores['oscillatory-hall']+scores["strongly-detached-hall"]+scores["fully_detached"]
 r_held = scores['correct']+scores['incorrect']
-# %%
+
+#%%
 import seaborn as sns
 import matplotlib.pyplot as plt
 # %%

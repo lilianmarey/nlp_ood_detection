@@ -4,7 +4,8 @@ import tarfile
 import os
 import wget
 
-#might need to get new links @ https://github.com/deep-spin/hallucinations-in-nmt
+#If there is an error such that :FileNotFoundError: [Errno 2] No such file or directory: 'wmt18_de-en.tar.xz'
+# It is because mediafire update its links. To do so, click on the links below, generate a new link, and replace it.
 
 def main():
     print("Download script for OT for Hallucination detection")
@@ -24,7 +25,7 @@ def main():
     if not os.path.isdir("data/wmt18_de-en") or not os.listdir("data/wmt18_de-en"):
         print("Downloading data... (260+ Mo)")
         mediafire_dl.download(
-            "https://download847.mediafire.com/s2x7sxq3kgcg/jfl7y6yu7jqwwhv/wmt18_de-en.tar.xz",
+            "https://download847.mediafire.com/q917g6c8cz3gSs1zor4U1F_58g8Vobipq53Xx3zFIT5vQv7LlfPizFV8Krg73LD9pF9UMqMlChQ4ZpEplODfxKUP8A/jfl7y6yu7jqwwhv/wmt18_de-en.tar.xz",
             "wmt18_de-en.tar.xz",
             False,
         )
@@ -48,7 +49,7 @@ def main():
         spm_url = "https://github.com/deep-spin/hallucinations-in-nmt/raw/main/sentencepiece_models/sentencepiece.joint.bpe.model"
         wget.download(spm_url, "./checkpoint/sentencepiece.joint.bpe.model")
 
-    print('Everything is present')
+    print('\n Everything is present')
 
 
 if __name__ == "__main__":
