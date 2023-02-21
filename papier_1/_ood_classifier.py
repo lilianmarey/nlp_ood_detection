@@ -34,14 +34,14 @@ class OODDetector(ClassifierMixin):
                 cdist, XB=m, metric="mahalanobis", VI=VI
             )
         elif self.similarity == "IRW":
-            self._compute_sim = partial_wrapper(
+            self._compute_sim = lambda x: 1 - partial_wrapper(
                 AI_IRW,
                 X=base_distribution,
                 n_dirs=1000,
                 AI=False,
                 robust=False,
                 random_state=None,
-            )
+            )(x)
         return None
 
     def predict(self, X: np.ndarray) -> np.ndarray:
