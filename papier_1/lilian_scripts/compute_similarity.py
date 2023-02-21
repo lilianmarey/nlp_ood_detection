@@ -53,3 +53,7 @@ def save_distances(df, file_name):
 
 
 
+# Coder les fonctions de distances à partir des latent representation
+# Lancer le code pour calculer toutes les distances
+# Faire une viz / évaluer avec les metriques du papier (err etc.)
+# Mettre en place la feature importance
