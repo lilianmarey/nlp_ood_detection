@@ -4,7 +4,7 @@ import numpy as np
 ### FROM https://github.com/GuillaumeStaermanML/AIIRW
 
 
-def AI_IRW(X, AI=True, robust=False, n_dirs=None, X_test=None, random_state=None):
+def AI_IRW(X_test, AI=True, robust=False, n_dirs=None, X=None, random_state=None):
     """ Compute the score of the (Affine-invariant-) integrated rank 
         weighted depth of X_test w.r.t. X
 
