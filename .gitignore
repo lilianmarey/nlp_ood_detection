@@ -1,10 +1,7 @@
 env_nlp
-papier_1/distrib.csv
-papier_1/distrib_.csv
-
-papier_1/distrib_average.csv
-papier_1/distrib_first.csv
+papier_1/lilian_scripts/data
 papier_1/test.csv
+
 .DS_Store
 */checkpoint
 */data
