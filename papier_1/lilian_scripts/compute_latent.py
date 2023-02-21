@@ -107,7 +107,8 @@ def compute_all_latent(inputs):
 
 dataset = load_dataset("imdb")
 
-inputs = [dataset['test'][i]['text'] for i in range(len(dataset['test']))]
+inputs = [dataset['train'][i]['text'] for i in range(len(dataset['train']))]
+# inputs = [dataset['test'][i]['text'] for i in range(2000)]
 
 df = compute_all_latent(inputs)
-df.to_csv('in_latent.csv', index = False)
+df.to_csv('train_latent.csv', index = False)
