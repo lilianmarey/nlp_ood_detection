@@ -1,9 +1,8 @@
 import pandas as pd
 import numpy as np
+from tqdm import tqdm
 
-df_train = pd.read_csv('train_latent.csv').T
-df_in = pd.read_csv('in_latent.csv').T
-df_out = pd.read_csv('out_latent.csv').T
+df_train = pd.read_csv('data/train_latent.csv').T
 
 df_train_0 = df_train[df_train[9216] == 0][range(12*768)]
 df_train_1 = df_train[df_train[9216] == 1][range(12*768)]
@@ -86,11 +85,10 @@ def save_similarities(df, file_name):
                         D_IRW(avg_v, pred, vectors_0, vectors_1)
                             ])
     
-    pd.dataFrame(np.array(distances), columns = ['MSP', 'E', 'D_M', 'D_IRW']).to_csv('in_distances.csv')
+    pd.DataFrame(np.array(distances), columns = ['MSP', 'E', 'D_M', 'D_IRW']).to_csv(file_name)
 
 
+df_in = pd.read_csv('data/in_latent.csv').T
+# df_out = pd.read_csv('data/out_latent.csv').T
 
-# Coder les fonctions de distances à partir des latent representation
-# Lancer le code pour calculer toutes les distances
-# Faire une viz / évaluer avec les metriques du papier (err etc.)
-# Mettre en place la feature importance
+save_similarities(df_in, 'in_distances.csv')
