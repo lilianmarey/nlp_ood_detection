@@ -41,7 +41,7 @@ def D_energy(x, T = 1):
     """
     return T * np.log(np.exp(x / T) + np.exp((1 - x) / T))
 
-def D_M(x, class_0_variables, class_1_variables):
+def D_M(x, prediction, class_0_variables, class_1_variables):
     """Mahalanobis distance
     """
     if prediction == 0:
@@ -79,7 +79,7 @@ def save_similarities(df, file_name):
         avg_v = np.mean(v, axis = 1)
 
         distances.append([
-                        D_MSP(softmax), 
+                        MSP(softmax), 
                         D_energy(softmax), 
                         -D_M(avg_v, pred, class_0_variables, class_1_variables), 
                         D_IRW(avg_v, pred, vectors_0, vectors_1)
