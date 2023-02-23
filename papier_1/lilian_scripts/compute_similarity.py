@@ -71,8 +71,8 @@ def D_IRW(x, prediction, vectors_0, vectors_1):
 def save_similarities(df, file_name):
     distances = []
     X = np.array(df)
-    for i in tqdm(range(X.shape[1])):
-        v = X[0, :]
+    for i in tqdm(range(X.shape[0])):
+        v = X[i, :]
         softmax = v[-1]
         pred = v[-2]
         v = np.reshape(v[:-2], (768, 12))
@@ -90,6 +90,6 @@ def save_similarities(df, file_name):
 
 
 df_in = pd.read_csv('data/in_latent.csv').T
-# df_out = pd.read_csv('data/out_latent.csv').T
+# df_out = pd.read_csv('data/out_latent.csv')
 
 save_similarities(df_in, 'in_distances.csv')
