@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
+from aiirw import AI_IRW
 
 df_train = pd.read_csv('data/train_latent.csv').T
 
