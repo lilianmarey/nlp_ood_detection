@@ -66,7 +66,7 @@ def D_IRW(x, prediction, vectors_0, vectors_1):
     else:
         return ValueError
     
-    return AI_IRW(X=train_vectors, AI=False, X_test=np.reshape(x, (1, 768)), n_dirs=1000)[0]
+    return AI_IRW(X=train_vectors, AI=True, X_test=np.reshape(x, (1, 768)), n_dirs=1000)[0]
 
 def save_similarities(df, file_name):
     distances = []
@@ -89,7 +89,7 @@ def save_similarities(df, file_name):
     pd.DataFrame(np.array(distances), columns = ['MSP', 'E', 'D_M', 'D_IRW']).to_csv(file_name)
 
 
-df_in = pd.read_csv('data/in_latent.csv').T
+df_in = pd.read_csv('data/out_latent.csv').T
 # df_out = pd.read_csv('data/out_latent.csv')
 
-save_similarities(df_in, 'in_distances.csv')
+save_similarities(df_in, 'out_distances.csv')
