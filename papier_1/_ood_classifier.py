@@ -2,6 +2,7 @@ from typing import Callable, Optional
 
 import numpy as np
 from aiirw import AI_IRW
+import ot
 from scipy.spatial.distance import cdist
 from sklearn.base import ClassifierMixin
 
@@ -55,6 +56,7 @@ class OODDetector(ClassifierMixin):
         base_distribution: Optional[np.ndarray] = None,
         similarity: str = "mahalanobis",
         T: float = 1.0,
+        k: int = 10,
     ):
         super().__init__()
 
@@ -63,14 +65,21 @@ class OODDetector(ClassifierMixin):
             "IRW",
             "MSP",
             "E",
+            "wass2unif",
+            "wass2data",
         ], "Similarity is not available"
 
         if base_distribution is None:
-            assert similarity in ["MSP", "E"], "Similarity is not available"
+            assert similarity in [
+                "MSP",
+                "E",
+                "wass2unif",
+            ], "Similarity is not available"
 
         self.tau = tau
         self.similarity = similarity
         self.T = T
+        self.k = k
 
         self.base_distribution = base_distribution
 
@@ -115,6 +124,21 @@ class OODDetector(ClassifierMixin):
         elif self.similarity == "E":
             self._compute_sim = lambda x: self.T * logSumExp(x / self.T)
 
+        elif self.similarity == "wass2unif":
+            self._compute_sim = lambda x: -np.mean(
+                np.abs(x - ot.unif(x.shape[-1])), axis=-1
+            )
+
+        elif self.similarity == "wass2data":
+            self._compute_sim = lambda x: -np.mean(
+                np.sort(
+                    partial_wrapper(
+                        cdist, XB=self.base_distribution, metric="cityblock"
+                    )(x),
+                    axis=-1,
+                )[:, : self.k]
+            )
+
         return None
 
     def fit(self, X: Optional[np.ndarray] = None, y: Optional[np.ndarray] = None):
@@ -131,11 +155,18 @@ class OODDetector(ClassifierMixin):
         return np.mean((y_pred == y).astype(int))
 
     def get_params(self, deep=True):
-        return {
+        base = {
             "tau": self.tau,
             "similarity": self.similarity,
-            "base_distribution": self.base_distribution,
         }
+
+        if self.similarity == "E":
+            base["T"] = self.T
+
+        if self.similarity == "wass2data":
+            base["k"] = self.k
+
+        return base
 
     def set_params(self, **parameters):
         for parameter, value in parameters.items():
