@@ -20,7 +20,7 @@ def partial_wrapper(f, **kwargs):
     """
 
     def wrapper(*args):
-        return f(*args, **kwargs).flatten()
+        return f(*args, **kwargs)
 
     return wrapper
 
@@ -136,7 +136,8 @@ class OODDetector(ClassifierMixin):
                         cdist, XB=self.base_distribution, metric="cityblock"
                     )(x),
                     axis=-1,
-                )[:, : self.k]
+                )[:, : self.k],
+                axis=-1,
             )
 
         return None
