@@ -60,9 +60,7 @@ class Corpus(Dataset):
    
   def __getitem__(self,idx):
     return self.x_train[idx],self.y_train[idx]
-#%%
 
-dl = 
 #%%
 
 corp = Corpus()
