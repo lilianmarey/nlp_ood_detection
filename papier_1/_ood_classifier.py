@@ -82,3 +82,11 @@ class OODDetector(ClassifierMixin):
         for parameter, value in parameters.items():
             setattr(self, parameter, value)
         return self
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        if len(X.shape) == 1:
+            X = X[None, :]
+        return self._compute_sim(X)
+
+    def decision_function(self, X: np.ndarray) -> np.ndarray:
+        return self.predict_proba(X)
