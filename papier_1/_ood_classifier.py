@@ -1,12 +1,10 @@
 from typing import Callable, Optional
 
 import numpy as np
-from aiirw import AI_IRW
 import ot
+from aiirw import AI_IRW
 from scipy.spatial.distance import cdist
 from sklearn.base import ClassifierMixin
-
-__available_similarities__ = ["mahalanobis", "IRW", "MSP", "E"]
 
 
 def partial_wrapper(f, **kwargs):
@@ -52,7 +50,7 @@ def logSumExp(A: np.ndarray) -> np.ndarray:
 class OODDetector(ClassifierMixin):
     def __init__(
         self,
-        tau: float,
+        tau: float = 1,
         base_distribution: Optional[np.ndarray] = None,
         similarity: str = "mahalanobis",
         T: float = 1.0,
