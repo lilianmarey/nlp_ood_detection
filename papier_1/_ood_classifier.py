@@ -103,9 +103,9 @@ class OODDetector(ClassifierMixin):
                 1, self.base_distribution.shape[1]
             )
             VI = np.linalg.inv(np.cov(self.base_distribution.T))
-            self._compute_sim = lambda x: -partial_wrapper(
+            self._compute_sim = partial_wrapper(
                 cdist, XB=m, metric="mahalanobis", VI=VI
-            )(x)
+            )
         elif self.similarity == "IRW":
             self._compute_sim = partial_wrapper(
                 AI_IRW,
@@ -123,12 +123,12 @@ class OODDetector(ClassifierMixin):
             self._compute_sim = lambda x: self.T * logSumExp(x / self.T)
 
         elif self.similarity == "wass2unif":
-            self._compute_sim = lambda x: -np.mean(
+            self._compute_sim = lambda x: np.mean(
                 np.abs(x - ot.unif(x.shape[-1])), axis=-1
             )
 
         elif self.similarity == "wass2data":
-            self._compute_sim = lambda x: -np.mean(
+            self._compute_sim = lambda x: np.mean(
                 np.sort(
                     partial_wrapper(
                         cdist, XB=self.base_distribution, metric="cityblock"
