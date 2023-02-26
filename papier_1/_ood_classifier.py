@@ -54,7 +54,7 @@ class OODDetector(ClassifierMixin):
         base_distribution: Optional[np.ndarray] = None,
         similarity: str = "mahalanobis",
         T: float = 1.0,
-        k: int = 10,
+        k: int = 4,
     ):
         super().__init__()
 
@@ -65,6 +65,7 @@ class OODDetector(ClassifierMixin):
             "E",
             "wass2unif",
             "wass2data",
+            "wasscombo",
         ], "Similarity is not available"
 
         if base_distribution is None:
@@ -72,7 +73,7 @@ class OODDetector(ClassifierMixin):
                 "MSP",
                 "E",
                 "wass2unif",
-            ], "Similarity is not available"
+            ], "You must provide a train distribution for data-driven detector"
 
         self.tau = tau
         self.similarity = similarity
@@ -103,32 +104,36 @@ class OODDetector(ClassifierMixin):
                 1, self.base_distribution.shape[1]
             )
             VI = np.linalg.inv(np.cov(self.base_distribution.T))
-            self._compute_sim = partial_wrapper(
+            self._compute_dist = partial_wrapper(
                 cdist, XB=m, metric="mahalanobis", VI=VI
             )
         elif self.similarity == "IRW":
-            self._compute_sim = partial_wrapper(
+            self._compute_dist = lambda x: 1 - partial_wrapper(
                 AI_IRW,
                 X=self.base_distribution,
                 n_dirs=1000,
-                AI=False,
+                AI=True,
                 robust=False,
                 random_state=None,
-            )
+            )(x)
 
         elif self.similarity == "MSP":
-            self._compute_sim = lambda x: 1 - np.max(softmax(x), axis=-1)
+            self._compute_dist = lambda x: np.max(softmax(x), axis=-1)
 
         elif self.similarity == "E":
-            self._compute_sim = lambda x: self.T * logSumExp(x / self.T)
+
+            def energy(x):
+                return self.T * logSumExp(x / self.T)
+
+            self._compute_dist = lambda x: np.max(energy(x)) - energy(x)
 
         elif self.similarity == "wass2unif":
-            self._compute_sim = lambda x: np.mean(
+            self._compute_dist = lambda x: np.sum(
                 np.abs(x - ot.unif(x.shape[-1])), axis=-1
             )
 
         elif self.similarity == "wass2data":
-            self._compute_sim = lambda x: np.mean(
+            self._compute_dist = lambda x: np.sum(
                 np.sort(
                     partial_wrapper(
                         cdist, XB=self.base_distribution, metric="cityblock"
@@ -137,6 +142,30 @@ class OODDetector(ClassifierMixin):
                 )[:, : self.k],
                 axis=-1,
             )
+
+        elif self.similarity == "wasscombo":
+
+            def wtd(x: np.ndarray) -> np.ndarray:
+                return np.mean(
+                    np.sort(
+                        partial_wrapper(
+                            cdist, XB=self.base_distribution, metric="cityblock"
+                        )(x),
+                        axis=-1,
+                    )[:, : self.k],
+                    axis=-1,
+                )
+
+            def wtu(x: np.ndarray) -> np.ndarray:
+                return np.mean(np.abs(x - ot.unif(x.shape[-1])), axis=-1)
+
+            WTU = wtu(self.base_distribution)
+
+            self.tau_u = np.percentile(WTU, 99)
+
+            self._compute_dist = lambda x: (wtu(x) > self.tau_u) * wtu(x) + (
+                wtu(x) <= self.tau_u
+            ) * wtd(x)
 
         return None
 
@@ -147,7 +176,7 @@ class OODDetector(ClassifierMixin):
     def predict(self, X: np.ndarray) -> np.ndarray:
         if len(X.shape) == 1:
             X = X[None, :]
-        return (self._compute_sim(X) <= self.tau).astype(int)
+        return (self._compute_dist(X) <= self.tau).astype(int)
 
     def score(self, X: np.ndarray, y: np.ndarray) -> float:
         y_pred = self.predict(X)
@@ -175,7 +204,7 @@ class OODDetector(ClassifierMixin):
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         if len(X.shape) == 1:
             X = X[None, :]
-        return self._compute_sim(X)
+        return self._compute_dist(X)
 
     def decision_function(self, X: np.ndarray) -> np.ndarray:
         return self.predict_proba(X)
