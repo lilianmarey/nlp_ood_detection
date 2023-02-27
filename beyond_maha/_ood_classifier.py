@@ -93,7 +93,7 @@ class OODDetector(ClassifierMixin):
             similarity=self.similarity,
         )
 
-    def _prefit(self):
+    def _prefit(self) -> None:
         """
         `_prefit` is a function that takes in a similarity metric and returns a function that computes the
         similarity between a given point and the base distribution
