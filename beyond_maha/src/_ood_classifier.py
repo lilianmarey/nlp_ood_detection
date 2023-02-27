@@ -2,7 +2,7 @@ from typing import Callable, Optional
 
 import numpy as np
 import ot
-from aiirw import AI_IRW
+from .aiirw import AI_IRW
 from scipy.spatial.distance import cdist
 from sklearn.base import ClassifierMixin
 
