@@ -2,6 +2,8 @@ env_nlp
 papier_1/lilian_scripts/data
 papier_1/test.csv
 
+beyond_maha/lilian_scripts/data
+
 .DS_Store
 */checkpoint
 */data
