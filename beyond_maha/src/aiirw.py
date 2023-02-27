@@ -98,7 +98,6 @@ def AI_IRW(X_test, AI=True, robust=False, n_dirs=None, X=None, random_state=None
 
         sequence = np.arange(1, n_samples_test + 1)
         depth = np.zeros((n_samples_test, n_dirs))
-        temp = np.zeros((n_samples_test, n_dirs))
 
         proj.sort(axis=0)
         for k in range(n_dirs):
