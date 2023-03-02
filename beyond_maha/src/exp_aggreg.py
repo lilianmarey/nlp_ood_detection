@@ -30,17 +30,17 @@ def minimize_error(in_distances, out_distances, threshold_range):
     errors = [error_threshold(in_distances, out_distances, threshold) for threshold in (threshold_range)]
     return np.min(errors)
 
-min_value = min([np.min(np.array(df.T)[:, :-2]), np.min(np.array(df_in.T)[:, :-2]), np.min(np.array(df_out.T)[:, :-2])])
-
-def power_mean_aggregation_function(p, min_value = min_value):
+def exp_aggregation_function(p):
     def f(df):
         X = np.array(df.T)
         softmax_scores = X[:, -1]
         preds = X[:, -2]
         X = X[:, :-2]
-        X = X.reshape((X.shape[0], 768, 12)) + min_value
+        X = X.reshape((X.shape[0], 768, 12)) 
 
-        X = X ** p
+        for i in range(12):
+            X[:, :, i] = np.exp(p * i *  X[:, :, i])
+
         X = np.mean(X, axis = 2)
         return X, softmax_scores, preds
 
@@ -65,18 +65,16 @@ def pipeline_alternative_aggregation(df_in, df_out, df, aggregation_funtion):
     score_maha = minimize_error(
                     (sim_df[sim_df['origin'] == 'in']['Maha']),
                     (sim_df[sim_df['origin'] == 'out']['Maha']),
-                    np.linspace(np.mean(sim_df[sim_df['origin'] == 'in']['Maha']), 
-                                np.mean(sim_df[sim_df['origin'] == 'out']['Maha']), 
-                                10000)
+                    list(sim_df[sim_df['origin'] == 'in']['Maha']) + list(sim_df[sim_df['origin'] == 'in']['Maha'])  
+
                             )
 
 
     score_IRW = minimize_error(
                     (sim_df[sim_df['origin'] == 'in']['IRW']),
                     (sim_df[sim_df['origin'] == 'out']['IRW']),
-                    np.linspace(np.mean(sim_df[sim_df['origin'] == 'in']['IRW']), 
-                                np.mean(sim_df[sim_df['origin'] == 'out']['IRW']), 
-                                10000)                            )
+                    list(sim_df[sim_df['origin'] == 'in']['IRW']) + list(sim_df[sim_df['origin'] == 'in']['IRW'])  
+                         )                     
 
     return (score_maha, score_IRW)
 
@@ -91,12 +89,13 @@ def process_latent_df(df):
 
 print("computing baseline scores")
 scores = pipeline_alternative_aggregation(df_in, df_out, df, process_latent_df)
+print(scores)
 
 power_mean_results = []
 
-for p in tqdm(np.linspace(.001, 10, 100)):
-    power_mean_process = power_mean_aggregation_function(p) 
-    scores_p = pipeline_alternative_aggregation(df_in, df_out, df, power_mean_process)
-    power_mean_results.append([p, scores_p[0], scores_p[1]])
+for p in tqdm(np.linspace(.0001, 1, 500)):
+    exp_process = exp_aggregation_function(p) 
+    scores_p = pipeline_alternative_aggregation(df_in, df_out, df, exp_process)
+    power_mean_results.append([p, scores_p[0] - scores[0], scores_p[1] - scores[1]])
     pd.DataFrame(power_mean_results, columns = ['p', 'maha', 'IRW']).to_csv('Temp_.csv')
 
