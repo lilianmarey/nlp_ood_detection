@@ -47,14 +47,26 @@ def logSumExp(A: np.ndarray) -> np.ndarray:
     return np.log(np.sum(np.exp(A), axis=-1))
 
 
+def random_sampler_wrapper(f, base_distribution, sampling_ratio):
+    def wrapper(*args):
+        n = base_distribution.shape[0]
+        idxs = np.random.choice(n, size=int(n * sampling_ratio), replace=False)
+        ds = base_distribution[idxs, :]
+        return f(*args, ds=ds)
+
+    return wrapper
+
+
 class OODDetector(ClassifierMixin):
     def __init__(
         self,
         tau: float = 1,
         base_distribution: Optional[np.ndarray] = None,
+        base_ood_distribution: Optional[np.ndarray] = None,
         similarity: str = "mahalanobis",
         T: float = 1.0,
         k: int = 4,
+        sampling_ratio: Optional[float] = None,
     ):
         super().__init__()
 
@@ -66,6 +78,7 @@ class OODDetector(ClassifierMixin):
             "wass2unif",
             "wass2data",
             "wasscombo",
+            "custom_l2",
         ], "Similarity is not available"
 
         if base_distribution is None:
@@ -75,12 +88,19 @@ class OODDetector(ClassifierMixin):
                 "wass2unif",
             ], "You must provide a train distribution for data-driven detector"
 
+        if base_ood_distribution is None:
+            assert (
+                similarity != "custom_l2"
+            ), "You must provide a train ood distribution for custom_l2 detector"
+
         self.tau = tau
         self.similarity = similarity
         self.T = T
         self.k = k
 
         self.base_distribution = base_distribution
+        self.base_ood_distribution = base_ood_distribution
+        self.sampling_ratio = sampling_ratio  # allows for lesser computations
 
     def clone(self):
         """
@@ -100,14 +120,20 @@ class OODDetector(ClassifierMixin):
         :return: None
         """
         if self.similarity == "mahalanobis":
+            if len(self.base_distribution.shape) == 3:
+                self.base_distribution = np.mean(self.base_distribution, axis=-1)
+
             m = np.mean(self.base_distribution, axis=0).reshape(
                 1, self.base_distribution.shape[1]
             )
             VI = np.linalg.inv(np.cov(self.base_distribution.T))
-            self._compute_dist = partial_wrapper(
+            self._compute_dist = lambda x: partial_wrapper(
                 cdist, XB=m, metric="mahalanobis", VI=VI
-            )
+            )(np.mean(x, axis=-1))
         elif self.similarity == "IRW":
+            if len(self.base_distribution.shape) == 3:
+                self.base_distribution = np.mean(self.base_distribution, axis=-1)
+
             self._compute_dist = lambda x: 1 - partial_wrapper(
                 AI_IRW,
                 X=self.base_distribution,
@@ -115,7 +141,7 @@ class OODDetector(ClassifierMixin):
                 AI=True,
                 robust=False,
                 random_state=None,
-            )(x)
+            )(np.mean(x, axis=-1))
 
         elif self.similarity == "MSP":
             self._compute_dist = lambda x: np.max(softmax(x), axis=-1)
@@ -133,31 +159,45 @@ class OODDetector(ClassifierMixin):
             )
 
         elif self.similarity == "wass2data":
-            self._compute_dist = lambda x: np.sum(
-                np.sort(
-                    partial_wrapper(
-                        cdist, XB=self.base_distribution, metric="cityblock"
-                    )(x),
-                    axis=-1,
-                )[:, : self.k],
-                axis=-1,
-            )
 
-        elif self.similarity == "wasscombo":
-
-            def wtd(x: np.ndarray) -> np.ndarray:
-                return np.mean(
+            def compute_dist_wrt(x, ds):
+                return np.sum(
                     np.sort(
-                        partial_wrapper(
-                            cdist, XB=self.base_distribution, metric="cityblock"
-                        )(x),
+                        partial_wrapper(cdist, XB=ds, metric="cityblock")(x),
                         axis=-1,
                     )[:, : self.k],
                     axis=-1,
                 )
 
+            if self.sampling_ratio:
+                self._compute_dist = random_sampler_wrapper(
+                    compute_dist_wrt, self.base_distribution, self.sampling_ratio
+                )
+            else:
+                self._compute_dist = lambda x: compute_dist_wrt(
+                    x, self.base_distribution
+                )
+
+        elif self.similarity == "wasscombo":
+
+            def _wtd(x: np.ndarray, ds: np.ndarray) -> np.ndarray:
+                return np.sum(
+                    np.sort(
+                        partial_wrapper(cdist, XB=ds, metric="cityblock")(x),
+                        axis=-1,
+                    )[:, : self.k],
+                    axis=-1,
+                )
+
+            if self.sampling_ratio:
+                wtd = random_sampler_wrapper(
+                    _wtd, self.base_distribution, self.sampling_ratio
+                )
+            else:
+                wtd = lambda x: _wtd(x, self.base_distribution)
+
             def wtu(x: np.ndarray) -> np.ndarray:
-                return np.mean(np.abs(x - ot.unif(x.shape[-1])), axis=-1)
+                return np.sum(np.abs(x - ot.unif(x.shape[-1])), axis=-1)
 
             WTU = wtu(self.base_distribution)
 
@@ -166,6 +206,44 @@ class OODDetector(ClassifierMixin):
             self._compute_dist = lambda x: (wtu(x) > self.tau_u) * wtu(x) + (
                 wtu(x) <= self.tau_u
             ) * wtd(x)
+
+        elif self.similarity == "custom_l2":
+            embd_ood_mean = np.mean(self.base_ood_distribution, axis=0)
+            embd_train_mean = np.mean(self.base_distribution, axis=0)
+
+            OOD_cov = np.mean(
+                [
+                    self.base_ood_distribution[i].T @ self.base_ood_distribution[i]
+                    for i in range(self.base_ood_distribution.shape[0])
+                ],
+                axis=0,
+            )
+            train_cov = np.mean(
+                [
+                    self.base_distribution[i].T @ self.base_distribution[i]
+                    for i in range(self.base_distribution.shape[0])
+                ],
+                axis=0,
+            )
+
+            G = (
+                OOD_cov
+                + train_cov
+                - (embd_train_mean - embd_ood_mean).T
+                @ (embd_train_mean - embd_ood_mean)
+            )
+            eig_val, eig_vec = np.linalg.eigh(G)
+            alpha = eig_vec[0]
+
+            def l2_custom(x: np.ndarray, ds: np.ndarray) -> np.ndarray:
+                return np.sum(cdist(ds @ alpha, x @ alpha), axis=0)
+
+            if self.sampling_ratio:
+                self._compute_dist = random_sampler_wrapper(
+                    l2_custom, self.base_distribution, self.sampling_ratio
+                )
+            else:
+                self._compute_dist = lambda x: l2_custom(x, self.base_distribution)
 
         return None
 
