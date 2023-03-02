@@ -78,7 +78,7 @@ class OODDetector(ClassifierMixin):
             "wass2unif",
             "wass2data",
             "wasscombo",
-            "custom_l2",
+            "LiLO",
         ], "Similarity is not available"
 
         if base_distribution is None:
@@ -90,8 +90,8 @@ class OODDetector(ClassifierMixin):
 
         if base_ood_distribution is None:
             assert (
-                similarity != "custom_l2"
-            ), "You must provide a train ood distribution for custom_l2 detector"
+                similarity != "LiLO"
+            ), "You must provide a train ood distribution for LiLO detector"
 
         self.tau = tau
         self.similarity = similarity
@@ -207,7 +207,7 @@ class OODDetector(ClassifierMixin):
                 wtu(x) <= self.tau_u
             ) * wtd(x)
 
-        elif self.similarity == "custom_l2":
+        elif self.similarity == "LiLO":
             embd_ood_mean = np.mean(self.base_ood_distribution, axis=0)
             embd_train_mean = np.mean(self.base_distribution, axis=0)
 
