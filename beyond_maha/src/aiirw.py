@@ -1,4 +1,4 @@
-from .utils import standardize, sampled_sphere
+from .utils.aiirw_utils import standardize, sampled_sphere
 import numpy as np
 
 ### FROM https://github.com/GuillaumeStaermanML/AIIRW

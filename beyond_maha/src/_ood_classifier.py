@@ -2,62 +2,28 @@ from typing import Optional
 
 import numpy as np
 import ot
-from .aiirw import AI_IRW
 from scipy.spatial.distance import cdist
 from sklearn.base import ClassifierMixin
 
-
-def partial_wrapper(f, **kwargs):
-    """
-    It takes a function and some keyword arguments, and returns a function that takes some positional
-    arguments, calls the original function with the positional arguments and the keyword arguments, and
-    returns the flattened result
-
-    :param f: the function to be wrapped
-    :return: The function wrapper is being returned.
-    """
-
-    def wrapper(*args):
-        return f(*args, **kwargs)
-
-    return wrapper
-
-
-def softmax(A: np.ndarray) -> np.ndarray:
-    """
-    It takes an array of numbers and returns an array of numbers that are the softmax of the original
-    numbers
-
-    :param A: The input to the softmax function
-    :type A: np.ndarray
-    :return: The softmax function is being returned.
-    """
-    e_A = np.exp(A)
-    return np.diag(1 / np.sum(e_A, axis=-1)) @ e_A
-
-
-def logSumExp(A: np.ndarray) -> np.ndarray:
-    """
-    > soft surrogate for the max function
-
-    :param A: a 2D array of shape (N, K)
-    :type A: np.ndarray
-    :return: The log of the sum of the exponentials of the array A.
-    """
-    return np.log(np.sum(np.exp(A), axis=-1))
-
-
-def random_sampler_wrapper(f, base_distribution, sampling_ratio):
-    def wrapper(*args):
-        n = base_distribution.shape[0]
-        idxs = np.random.choice(n, size=int(n * sampling_ratio), replace=False)
-        ds = base_distribution[idxs, :]
-        return f(*args, ds=ds)
-
-    return wrapper
+from .aiirw import AI_IRW
+from .utils._ood_classifier_utils import (check_fitted, logSumExp,
+                                          partial_wrapper,
+                                          random_sampler_wrapper, softmax)
 
 
 class OODDetector(ClassifierMixin):
+    """
+    We made the choice not to take the training distributions as inputs of the fit method as it could be
+    done in sklearn because of a sense-problem. The OOD detector is classifier that detects OOD samples.
+    Therefore its target is a vector of 1 if OOD and else 0.
+    Therefore, calling .fit(X,y) to fit the classifier to its base distribution would be counterintuitive
+    because it is not the distribution we seek to fundamentally learn.
+    Moreover, this is an out-of-the-bag classifier, hence it is would not make sense to "fit" it to some
+    data in the scikit-learn sense.
+
+    To keep the formalism, we kept a fit function that actually does a prefitting.
+    """
+
     def __init__(
         self,
         tau: float = 1,
@@ -101,6 +67,8 @@ class OODDetector(ClassifierMixin):
         self.base_distribution = base_distribution
         self.base_ood_distribution = base_ood_distribution
         self.sampling_ratio = sampling_ratio  # allows for lesser computations
+
+        self.__is_fitted__ = False
 
     def clone(self):
         """
@@ -161,6 +129,13 @@ class OODDetector(ClassifierMixin):
         elif self.similarity == "wass2data":
 
             def compute_dist_wrt(x, ds):
+                """
+                `compute_dist_wrt` computes the sum of the k-nearest $\ell_1$-distances of a point x to a dataset ds
+
+                :param x: the point we're trying to find the distance to
+                :param ds: the dataset
+                :return: The distance between the point and the k nearest neighbors.
+                """
                 return np.sum(
                     np.sort(
                         partial_wrapper(cdist, XB=ds, metric="cityblock")(x),
@@ -181,6 +156,16 @@ class OODDetector(ClassifierMixin):
         elif self.similarity == "wasscombo":
 
             def _wtd(x: np.ndarray, ds: np.ndarray) -> np.ndarray:
+                """
+                > For each row in `X`, find the `k` closest rows in `ds` and return the sum of the $\ell_1$distances between
+                the row in `X` and the `k` closest rows in `ds`
+
+                :param x: np.ndarray, ds: np.ndarray
+                :type x: np.ndarray
+                :param ds: the dataset
+                :type ds: np.ndarray
+                :return: The sum of the k-nearest neighbors of each point in the dataset.
+                """
                 return np.sum(
                     np.sort(
                         partial_wrapper(cdist, XB=ds, metric="cityblock")(x),
@@ -232,7 +217,9 @@ class OODDetector(ClassifierMixin):
                 - (embd_train_mean - embd_ood_mean).T
                 @ (embd_train_mean - embd_ood_mean)
             )
-            eig_val, eig_vec = np.linalg.eigh(G)
+            eig_val, eig_vec = np.linalg.eigh(
+                G
+            )  # returns eigvecs sorted in increasing eigvals
             alpha = eig_vec[0]
 
             def l2_custom(x: np.ndarray, ds: np.ndarray) -> np.ndarray:
@@ -249,9 +236,11 @@ class OODDetector(ClassifierMixin):
 
     def fit(self, X: Optional[np.ndarray] = None, y: Optional[np.ndarray] = None):
         self._prefit()
+        self.__is_fitted__ = True
         return self
 
     def predict(self, X: np.ndarray) -> np.ndarray:
+        check_fitted(self)
         if len(X.shape) == 1:
             X = X[None, :]
         return (self._compute_dist(X) <= self.tau).astype(int)
@@ -280,6 +269,7 @@ class OODDetector(ClassifierMixin):
         return self
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        check_fitted(self)
         if len(X.shape) == 1:
             X = X[None, :]
         return self._compute_dist(X)
