@@ -36,7 +36,7 @@ df = compute_all_latent(inputs)
 df.to_csv('in_latent.csv', index=False)
 
 # ood
-dataset = load_dataset("ss")
+dataset = load_dataset("sst2")
 inputs = [i['sentence'] for i in np.random.choice(dataset['test'], 2000)]
 df = compute_all_latent(inputs)
 df.to_csv('out_latent.csv', index=False)
